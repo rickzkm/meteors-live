@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live Meteor Detection</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { text-align: center; font-family: Arial, sans-serif; transition: background 0.3s, color 0.3s; }
+        .container { margin-top: 20px; }
+        img { width: 100%; height: auto; border: 2px solid #333; padding: 5px; }
+        .filename { font-size: 14px; margin-top: 5px; color: #666; }
+        .dark-mode { background: #121212; color: white; }
+        .dark-mode img { border-color: white; }
+        .dark-mode .filename { color: #ccc; }
+        .controls { position: fixed; top: 10px; right: 20px; display: flex; gap: 10px; align-items: center; }
+    </style>
+</head>
+<body>
+    <h1 class="my-4">Live Meteor Detection</h1>
+
+    <!-- Control Panel for Dark Mode and Auto Refresh -->
+    <div class="controls">
+        <!-- Dark Mode Toggle -->
+        <div class="form-check form-switch">
+            <input class="form-check-input" type="checkbox" id="darkModeSwitch">
+            <label class="form-check-label" for="darkModeSwitch">Dark Mode</label>
+        </div>
+
+        <!-- Auto Refresh Toggle -->
+        <div class="form-check form-switch">
+            <input class="form-check-input" type="checkbox" id="autoRefreshSwitch">
+            <label class="form-check-label" for="autoRefreshSwitch">Auto Refresh</label>
+        </div>
+    </div>
+
+    <div class="container">
+        <div id="image-container" class="row g-3"> 
+            <!-- Images will be loaded here -->
+        </div>
+    </div>
+
+    <script>
+        const IMAGE_LIST_URL = "https://cement-live.s3.eu-central-1.amazonaws.com/stipa/image-list.json";
+        const BUCKET_URL = "https://cement-live.s3.eu-central-1.amazonaws.com/";
+
+        const REFRESH_INTERVAL = 60000; // 1 minute
+        let autoRefreshInterval = null;
+
+        async function fetchImages() {
+            try {
+                let response = await fetch(IMAGE_LIST_URL);
+                let data = await response.json();
+
+                console.log("Fetched JSON:", data); // Debugging
+
+                let imageContainer = document.getElementById("image-container");
+                imageContainer.innerHTML = ""; // Clear old images
+
+                if (!data.images || data.images.length === 0) {
+                    imageContainer.innerHTML = "<p class='text-center'>No images available.</p>";
+                    return;
+                }
+
+                data.images.forEach((imgPath) => {
+                    let imgTag = document.createElement("img");
+                    imgTag.src = BUCKET_URL + imgPath;
+                    imgTag.classList.add("img-fluid"); // Bootstrap responsive image
+
+                    // Decode the filename for display
+                    let decodedFilename = decodeURIComponent(imgPath.split('/').pop());
+
+                    // Create filename text
+                    let filenameText = document.createElement("p");
+                    filenameText.className = "filename";
+                    filenameText.textContent = decodedFilename;
+
+                    // Create link element
+                    let linkTag = document.createElement("a");
+                    linkTag.href = BUCKET_URL + imgPath;
+                    linkTag.target = "_blank"; // Open in new tab
+                    linkTag.appendChild(imgTag);
+
+                    // Wrap each image inside a Bootstrap grid column
+                    let colDiv = document.createElement("div");
+                    colDiv.className = "col-md-4 text-center"; // 3 images per row
+                    colDiv.appendChild(linkTag);
+                    colDiv.appendChild(filenameText);
+
+                    imageContainer.appendChild(colDiv);
+                });
+
+            } catch (error) {
+                console.error("Error fetching images:", error);
+                document.getElementById("image-container").innerHTML = "<p class='text-danger'>Error loading images.</p>";
+            }
+        }
+
+        // Dark Mode Toggle
+        const darkModeSwitch = document.getElementById("darkModeSwitch");
+
+        function applyDarkMode(isDark) {
+            document.body.classList.toggle("dark-mode", isDark);
+            localStorage.setItem("darkMode", isDark);
+        }
+
+        darkModeSwitch.addEventListener("change", () => {
+            applyDarkMode(darkModeSwitch.checked);
+        });
+
+        // Load Dark Mode preference from localStorage
+        if (localStorage.getItem("darkMode") === "true") {
+            darkModeSwitch.checked = true;
+            applyDarkMode(true);
+        }
+
+        // Auto Refresh Toggle
+        const autoRefreshSwitch = document.getElementById("autoRefreshSwitch");
+
+        function startAutoRefresh(enabled) {
+            if (enabled) {
+                if (!autoRefreshInterval) {
+                    autoRefreshInterval = setInterval(fetchImages, REFRESH_INTERVAL);
+                }
+            } else {
+                clearInterval(autoRefreshInterval);
+                autoRefreshInterval = null;
+            }
+            localStorage.setItem("autoRefresh", enabled);
+        }
+
+        autoRefreshSwitch.addEventListener("change", () => {
+            startAutoRefresh(autoRefreshSwitch.checked);
+        });
+
+        // Load Auto Refresh preference from localStorage
+        if (localStorage.getItem("autoRefresh") === "true") {
+            autoRefreshSwitch.checked = true;
+            startAutoRefresh(true);
+        } else {
+            startAutoRefresh(false);
+        }
+
+        // Fetch images initially when page loads
+        fetchImages();
+    </script>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
