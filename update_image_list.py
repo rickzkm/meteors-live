@@ -14,8 +14,8 @@ s3 = session.client("s3")
 # Configuration
 BUCKET_NAME = "cement-live"
 PREFIX = "stipa/"  # ✅ Root folder where images are stored
-IMAGE_LIST_PATH = "stipa/image-list.json"  # ✅ Now inside `stipa/`
-MAX_IMAGES = 36
+IMAGE_LIST_PATH = "metadata/image-list.json"  # ✅ Now inside `metadata/`
+MAX_IMAGES = 1000
 ALLOWED_EXTENSIONS = {"jpg", "jpeg", "png", "gif", "webp"}
 
 def list_all_images():
