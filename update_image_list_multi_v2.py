@@ -29,9 +29,8 @@ def fetch_existing_image_list():
         return []
 
 def list_new_images(existing_images):
-    """ Fetch only new images from S3 and return a list sorted by upload time (latest first). """
-    all_images = set(existing_images)  # Convert existing list to set for fast lookup
-    new_images = []
+    """ Fetch all images from S3 and return a fully sorted list based on last upload time. """
+    image_list = []
 
     paginator = s3.get_paginator("list_objects_v2")
 
@@ -42,18 +41,16 @@ def list_new_images(existing_images):
                     file_key = obj["Key"]
                     if file_key.split(".")[-1].lower() in ALLOWED_EXTENSIONS:
                         encoded_img = urllib.parse.quote(file_key, safe="/")
-                        if encoded_img not in all_images:  # Only add new images
-                            new_images.append((encoded_img, obj["LastModified"]))
+                        image_list.append({"path": encoded_img, "timestamp": obj["LastModified"]})
 
-    # Sort by LastModified timestamp (latest first)
-    new_images.sort(key=lambda x: x[1], reverse=True)
+    # Sort ALL images by LastModified timestamp (latest first)
+    image_list.sort(key=lambda x: x["timestamp"], reverse=True)
 
     # Extract only the file paths
-    new_images = [img[0] for img in new_images]
+    sorted_images = [img["path"] for img in image_list]
 
-    # Combine with existing images and enforce limit
-    updated_images = new_images + existing_images
-    return updated_images[:MAX_IMAGES]  # Keep only the latest MAX_IMAGES
+    # Keep only the latest MAX_IMAGES
+    return sorted_images[:MAX_IMAGES]
 
 def update_image_list():
     """ Fetch existing JSON, append only new images, and save the latest MAX_IMAGES. """
