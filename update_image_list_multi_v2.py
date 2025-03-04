@@ -29,7 +29,7 @@ def fetch_existing_image_list():
         return []
 
 def list_new_images(existing_images):
-    """ Fetch only new images from S3 and return a combined list. """
+    """ Fetch only new images from S3 and return a list sorted by upload time (latest first). """
     all_images = set(existing_images)  # Convert existing list to set for fast lookup
     new_images = []
 
@@ -43,12 +43,15 @@ def list_new_images(existing_images):
                     if file_key.split(".")[-1].lower() in ALLOWED_EXTENSIONS:
                         encoded_img = urllib.parse.quote(file_key, safe="/")
                         if encoded_img not in all_images:  # Only add new images
-                            new_images.append(encoded_img)
+                            new_images.append((encoded_img, obj["LastModified"]))
 
-    # Sort to keep latest images first
-    new_images.sort(reverse=True)
+    # Sort by LastModified timestamp (latest first)
+    new_images.sort(key=lambda x: x[1], reverse=True)
 
-    # Combine and limit to MAX_IMAGES
+    # Extract only the file paths
+    new_images = [img[0] for img in new_images]
+
+    # Combine with existing images and enforce limit
     updated_images = new_images + existing_images
     return updated_images[:MAX_IMAGES]  # Keep only the latest MAX_IMAGES
 
